@@ -17,7 +17,7 @@ if (route.params.slug) {
     id = id[0];
   }
 
-  const apiUrl = `https://trend.newcarsz.com/wp-json/wp/v2/posts?slug=${id}`;
+  const apiUrl = `https://trend.dx1st.beauty/wp-json/wp/v2/posts?slug=${id}`;
   const response = await fetch(apiUrl);
   const json = await response.json();
   //console.log(data);
