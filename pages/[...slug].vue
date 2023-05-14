@@ -21,7 +21,7 @@ const fetchData = async () => {
     const slug = route.params.slug;
     const postId = Array.isArray(slug) ? slug[0] : slug;
 
-    const apiUrl = `https://markmystories.com/wp-json/wp/v2/posts?slug=${postId}`;
+    const apiUrl = `https://zooms.wiki/wp-json/wp/v2/posts?slug=${postId}`;
 
     // Check if the response is already cached at the edge
     if (router?.response?.headers?.get('x-vercel-cache') === 'HIT') {
@@ -37,43 +37,109 @@ const fetchData = async () => {
     if (json.length > 0) {
       const data = json[0];
       const metaData = data.yoast_head_json;
-      // ...
+
+      // Convert properties from yoast_head_json to array
+      let meta = Object.entries(metaData)
+        .filter((item) => {
+          return [
+            "og_locale",
+            "og_type",
+            "og_title",
+            "og_description",
+            "og_url",
+            "og_site_name",
+            "article_published_time",
+            "twitter_card",
+          ].includes(item[0]);
+        })
+        .map((item) => {
+          if (item[0] === "twitter_card") {
+            return {
+              name: "twitter:card",
+              content: item[1],
+            };
+          }
+          return {
+            property: item[0]
+              .replace("og_", "og:")
+              .replace("article_", "article:")
+              .replace("twitter_", "twitter:"),
+            content: item[1],
+          };
+        });
+
+      // Case og_image
+      if (metaData.og_image) {
+        let imageMeta = [
+          {
+            property: "og:image",
+            content: metaData.og_image[0].url,
+          },
+          {
+            property: "og:image:width",
+            content: metaData.og_image[0].width,
+          },
+          {
+            property: "og:image:height",
+            content: metaData.og_image[0].height,
+          },
+          {
+            property: "og:image:type",
+            content: metaData.og_image[0].type,
+          },
+        ];
+        meta.push(...imageMeta);
+      }
+      if (metaData.twitter_misc) {
+        let tmp = Object.entries(metaData.twitter_misc);
+        tmp.forEach((item, key) => {
+          meta.push({
+            name: `twitter:label${key + 1}`,
+            content: item[0],
+          });
+          meta.push({
+            name: `twitter:data${key + 1}`,
+            content: item[1],
+          });
+        });
+      }
 
       useHead({
         title: metaData?.title,
         meta: [
-          // ...
+          ...meta,
+          {
+            name: "description",
+            content: metaData?.og_description,
+          },
         ],
         link: [
-          // ...
-        ],
-      });
+          { rel: "icon",
+        sizes: "32x32",
+        href: "/_nuxt/assets/img/32x32.png",
+      },
+      {
+        rel: "icon",
+        sizes: "192x192",
+        href: "/_nuxt/assets/img/192x192.png",
+      },
+      {
+        rel: "apple-touch-icon",
+        href: "/_nuxt/assets/img/180x180.png",
+      },
+    ],
+  });
 
-      // Cache the response
-      await cacheResponse(apiUrl, json);
-
-      return data;
-    } else {
-      throw { statusCode: 404, message: 'Post not found' };
-    }
-  } catch (error) {
-    router.replace('/error'); // Redirect to an error page
-  }
+  return data;
+} else {
+  throw { statusCode: 404, message: "Post not found" };
+}
+} catch (error) {
+  router.replace('/error'); // Redirect to an error page
+}
 };
 
 const data = computed(() => fetchData());
-
-const formatDate = (date) => {
-  let d = new Date(date);
-  let month = '' + (d.getMonth() + 1);
-  let day = '' + d.getDate();
-  let year = d.getFullYear();
-
-  if (month.length < 2) month = '0' + month;
-  if (day.length < 2) day = '0' + day;
-
-  return [year, month, day].join('-');
-};
 
 const getCachedData = async (url) => {
   const cache = await caches.open('cdn-cache');
@@ -88,6 +154,18 @@ const cacheResponse = async (url, data) => {
   const cache = await caches.open('cdn-cache');
   const response = new Response(JSON.stringify(data));
   await cache.put(url, response);
+};
+
+const formatDate = (date) => {
+  let d = new Date(date);
+  let month = '' + (d.getMonth() + 1);
+  let day = '' + d.getDate();
+  let year = d.getFullYear();
+
+  if (month.length < 2) month = '0' + month;
+  if (day.length < 2) day = '0' + day;
+
+  return [year, month, day].join('-');
 };
 
 onMounted(() => {
