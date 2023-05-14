@@ -21,7 +21,7 @@ const fetchData = async () => {
     const slug = route.params.slug;
     const postId = Array.isArray(slug) ? slug[0] : slug;
 
-    const apiUrl = `https://zooms.wiki/wp-json/wp/v2/posts?slug=${postId}`;
+    const apiUrl = `https://markmystories.com/wp-json/wp/v2/posts?slug=${postId}`;
 
     // Check if the response is already cached at the edge
     if (router?.response?.headers?.get('x-vercel-cache') === 'HIT') {
